@@ -1,0 +1,6 @@
+.env/
+.config/__pyacache__/
+.models/__pyacache__/
+.tasks/__pyacache__/
+.utils/__pyacache__/
+*venv/*
