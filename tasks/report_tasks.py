@@ -2,18 +2,31 @@ from crewai import Task
 from config.settings import Config
 import datetime
 from pathlib import Path
-from utils.docx_formatter import populate_template # Add this
+from utils.docx_formatter import populate_template  # Add this
 import logging  
 import os
 import re
 
 logger = logging.getLogger(__name__)
 
+def cleanup_old_reports(output_dir):
+    """Delete all past report files in the output directory."""
+    if output_dir.exists():
+        for file in output_dir.glob("report_*.docx"):
+            try:
+                file.unlink()
+                logger.info(f"Deleted old report: {file}")
+            except Exception as e:
+                logger.error(f"Error deleting {file}: {e}")
+
 def report_generation_task(agent, topic=None):
-    """Create a task for generating a research report."""
+    """Create a task for generating a research report and clean old files."""
     topic = topic or Config.REPORT_CONFIG["default_topic"]
     output_dir = Path("output").absolute()
     output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Cleanup old reports before creating a new one
+    cleanup_old_reports(output_dir)
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     output_file = output_dir / f"report_{timestamp}.docx"
@@ -25,7 +38,6 @@ def report_generation_task(agent, topic=None):
     )
     task.output_file = str(output_file)  # Set output_file attribute
     task.async_execution = False  # Set async_execution attribute
-    # task.callback = lambda result: (result, task.output_file) # Format report.
 
     return task
 
