@@ -5,9 +5,15 @@ load_dotenv()
 
 class Config:
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    SERPER_API_KEY = os.getenv("SERPER_API_KEY")
+
     REPORT_CONFIG = {
         "default_topic": "Agentic AI",
-        "sections": ["Executive Summary","Introduction", "Key Concepts", "Recent Developments", "Applications", "Future Outlook","Merits and Demerits","Conclusion"],
+        "sections": [
+            "Executive Summary", "Introduction", "Key Concepts",
+            "Recent Developments", "Applications", "Future Outlook",
+            "Merits and Demerits", "Conclusion"
+        ],
         "depth_level": 50
     }
     EMAIL_CONFIG = {

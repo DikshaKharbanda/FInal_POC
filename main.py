@@ -1,20 +1,19 @@
 import os
-os.environ["CREWAI_TELEMETRY_ENABLED"] = "0"  # Disable telemetry
+os.environ["CREWAI_TELEMETRY_ENABLED"] = "0"
 
 from pathlib import Path
 from crewai import Crew, Process
 from agents.report_agents import create_report_agent
-from tasks.report_tasks import report_generation_task,split_response_into_dict
-from utils.email_sender import send_report_email  # Corrected import
+from tasks.report_tasks import report_generation_task, split_response_into_dict
+from utils.email_sender import send_report_email
 from config.settings import Config
 import logging
 import traceback
 from utils.docx_formatter import populate_template
 
-
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
@@ -29,13 +28,11 @@ def main():
         default_topic = Config.REPORT_CONFIG.get("default_topic", "Technology Trends")
         report_topic = input(f"Enter research topic (default: {default_topic}): ") or default_topic
 
-        # Initialize CrewAI components
         agent = create_report_agent()
-        task2 = report_generation_task(agent, report_topic)
+        task = report_generation_task(agent, report_topic)
 
-        crew = Crew(agents=[agent], tasks=[task2], process=Process.sequential)
+        crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
 
-        # Execute workflow
         result = crew.kickoff()
         response_dict = split_response_into_dict(str(result))
         template_path = "Report_final_template.docx"
@@ -44,24 +41,22 @@ def main():
         populate_template(template_path, output_path, response_dict)
         print("\n✅ Report generated successfully!")
 
-        # Feedback loop for refining the report
         while True:
             feedback = get_user_feedback()
             if not feedback:
-                break  # Exit loop if user is satisfied
-            
+                break
+
             print("\n🔄 Regenerating report based on feedback...")
-            task2 = report_generation_task(agent, f"{report_topic} with focus on: {feedback}")
-            crew = Crew(agents=[agent], tasks=[task2], process=Process.sequential)
-            
-            # Execute updated task
+            task = report_generation_task(agent, f"{report_topic} with focus on: {feedback}")
+            crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
+
             revised_result = crew.kickoff()
             revised_response_dict = split_response_into_dict(str(revised_result))
             populate_template(template_path, output_path, revised_response_dict)
             print("\n✅ Updated report generated successfully!")
 
-        if result and task2.output_file:
-            output_path = Path(task2.output_file).resolve()
+        if result and task.output_file:
+            output_path = Path(task.output_file).resolve()
             try:
                 send_report_email("Generated_Report.docx", report_topic)
                 print(f"\n✅ Report generated and emailed successfully!\nFile: {output_path}\n")

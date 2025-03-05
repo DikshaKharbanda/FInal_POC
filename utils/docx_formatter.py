@@ -1,14 +1,6 @@
-from pathlib import Path
-import aspose.words as aw
-from aspose.words.saving import OoxmlSaveOptions, OoxmlCompliance
-import logging
-import re
 from docx import Document
 from docx.shared import Pt, RGBColor
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-logger = logging.getLogger(__name__)
-
-
 
 def populate_template(template_path, output_path, content_dict):
     """Replaces placeholders in a Word document with actual content, formatting headings and content."""
@@ -18,7 +10,7 @@ def populate_template(template_path, output_path, content_dict):
     if doc.paragraphs:
         first_para = doc.paragraphs[0]
         title_key = list(content_dict.keys())[0]  # Assume the first key is the title
-        first_para.text = content_dict[title_key].replace("*", "")
+        first_para.text = content_dict[title_key]
         first_para.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
         run = first_para.runs[0]
         run.bold = True
@@ -37,8 +29,6 @@ def populate_template(template_path, output_path, content_dict):
     
     # Continue with headings and content from the next page onwards
     for key, value in content_dict.items():
-        cleaned_value = value.replace("*", "")  # Remove asterisks
-        
         # Add heading
         heading = doc.add_paragraph()
         heading.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
@@ -49,7 +39,7 @@ def populate_template(template_path, output_path, content_dict):
         
         # Add content
         para = doc.add_paragraph()
-        run = para.add_run(cleaned_value)
+        run = para.add_run(value)
         run.font.size = Pt(20)
     
     doc.save(output_path)
