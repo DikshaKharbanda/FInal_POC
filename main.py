@@ -1,5 +1,6 @@
 import os
 os.environ["CREWAI_TELEMETRY_ENABLED"] = "0"
+os.environ['OTEL_SDK_DISABLED']="true"
 
 from pathlib import Path
 from crewai import Crew, Process

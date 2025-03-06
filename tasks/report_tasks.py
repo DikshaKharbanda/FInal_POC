@@ -23,11 +23,13 @@ def report_generation_task(agent, topic=None):
         logger.warning(f"No relevant data found for topic: {topic}")
         topic_details = "No relevant data available. Please refine the topic."
     else:
-        topic_details = "\n".join([f"- {entry.get('title', 'Unknown Title')} ({entry.get('link', 'No Link')})" for entry in topic_data])
+        # print(topic_data['organic'][0])
+        topic_details = "\n".join([f"- {entry.get('title', 'Unknown Title')} ({entry.get('link', 'No Link')})" for entry in topic_data['organic']])
 
     task = Task(
         description=f"Generate a comprehensive research report on '{topic}' including sections: {Config.REPORT_CONFIG['sections']}.\n\n"
-                    f"Use the following reference details:\n{topic_details}",
+                    f"Use the following reference details:\n{topic_details}\n\n"
+                    "Also, do mention the links that you used to provide a particular section of the generated response",
         expected_output="Detailed research report with structured insights.",
         agent=agent
     )
