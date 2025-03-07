@@ -2,15 +2,19 @@ from docx import Document
 from docx.shared import Pt, RGBColor
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
+def remove_asterisks(text):
+    """Removes all asterisks from the given text."""
+    return text.replace('*', '')
+
 def populate_template(template_path, output_path, content_dict):
-    """Replaces placeholders in a Word document with actual content, formatting headings and content."""
+    """Replaces placeholders in a Word document with actual content, ensuring no asterisks appear."""
     doc = Document(template_path)
     
     # Replace the title on the first page and format it nicely
     if doc.paragraphs:
         first_para = doc.paragraphs[0]
         title_key = list(content_dict.keys())[0]  # Assume the first key is the title
-        first_para.text = content_dict[title_key]
+        first_para.text = remove_asterisks(content_dict[title_key])
         first_para.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
         run = first_para.runs[0]
         run.bold = True
@@ -32,14 +36,14 @@ def populate_template(template_path, output_path, content_dict):
         # Add heading
         heading = doc.add_paragraph()
         heading.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
-        run = heading.add_run(key)
+        run = heading.add_run(remove_asterisks(key))
         run.bold = True
         run.underline = True
         run.font.size = Pt(26)
         
         # Add content
         para = doc.add_paragraph()
-        run = para.add_run(value)
+        run = para.add_run(remove_asterisks(value))
         run.font.size = Pt(20)
     
     doc.save(output_path)

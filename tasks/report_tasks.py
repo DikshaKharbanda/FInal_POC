@@ -112,4 +112,4 @@ def split_response_into_dict(response):
         content = sections[i + 1].strip() if i + 1 < len(sections) else ""
         response_dict[heading] = content
     
-    return response_dict
+    return response_dict  
