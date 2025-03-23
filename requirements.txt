@@ -4,3 +4,4 @@ litellm>=1.0.0
 python-dotenv>=1.0.0
 beautifulsoup4
 crewai_tools==0.4.2
+streamlit==1.42.3

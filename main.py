@@ -1,8 +1,8 @@
 import os
-os.environ["CREWAI_TELEMETRY_ENABLED"] = "0"
-os.environ['OTEL_SDK_DISABLED']="true"
+os.environ["CREWAI_TELEMETRY_ENABLED"] = "0"  # Disable telemetry
+os.environ["OTEL_SDK_DISABLED"] = "true"
 
-from pathlib import Path
+import streamlit as st
 from crewai import Crew, Process
 from agents.report_agents import create_report_agent
 from tasks.report_tasks import report_generation_task, split_response_into_dict
@@ -12,65 +12,137 @@ import logging
 import traceback
 from utils.docx_formatter import populate_template
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()]
-)
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-def get_user_feedback():
-    """Ask user for feedback to refine the report."""
-    feedback = input("\n🔍 Do you want to add, emphasize, or modify anything in the report? (Leave blank if satisfied): ")
-    return feedback.strip()
+def generate_report(report_topic, feedback=None):
+    agent = create_report_agent()
+    task_prompt = f"{report_topic} with focus on: {feedback}" if feedback else report_topic
+    task = report_generation_task(agent, task_prompt)
+    
+    crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
+    result = crew.kickoff()
+    response_dict = split_response_into_dict(str(result))
+    
+    template_path = "Report_final_template.docx"
+    output_path = "Generated_Report.docx"
+    populate_template(template_path, output_path, response_dict)
+    
+    return output_path
 
 def main():
-    try:
-        default_topic = Config.REPORT_CONFIG.get("default_topic", "Technology Trends")
-        report_topic = input(f"Enter research topic (default: {default_topic}): ") or default_topic
+    st.set_page_config(page_title="Deep Insight - AI Reports", page_icon="📄", layout="wide")
 
-        agent = create_report_agent()
-        task = report_generation_task(agent, report_topic)
+    # Custom Gemini-like UI with Yellow Theme
+    st.markdown("""
+        <style>
+            body {
+                background-color: #f5f7fa;
+                font-family: 'Inter', sans-serif;
+            }
+            .header {
+                text-align: center;
+                margin-bottom: 20px;
+            }
+            .header img {
+                max-width: 150px;
+            }
+            .chat-container {
+                max-width: 800px;
+                margin: auto;
+                padding: 20px;
+            }
+            .chat-bubble {
+                border-radius: 20px;
+                padding: 15px;
+                margin: 10px 0;
+                display: inline-block;
+                max-width: 80%;
+                font-size: 16px;
+            }
+            .user-bubble {
+                background-color: #ffcc00;
+                color: black;
+                text-align: right;
+                align-self: flex-end;
+            }
+            .bot-bubble {
+                background-color: #fff3cd;
+                color: black;
+                text-align: left;
+                align-self: flex-start;
+            }
+            .stTextInput, .stTextArea {
+                border: 2px solid #ffcc00 !important;
+                border-radius: 12px !important;
+                padding: 12px !important;
+                font-size: 16px !important;
+            }
+            .stButton button {
+                background: linear-gradient(to right, #ffcc00, #ffb300) !important;
+                color: black !important;
+                border-radius: 12px !important;
+                padding: 14px 28px !important;
+                transition: all 0.3s ease-in-out !important;
+            }
+            .stButton button:hover {
+                background: linear-gradient(to right, #ffb300, #ffa000) !important;
+                transform: scale(1.05);
+            }
+            .fade-in {
+                animation: fadeIn 0.8s ease-in-out;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+        </style>
+    """, unsafe_allow_html=True)
 
-        crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
+    # EY Logo
+    st.markdown("""
+        <div class='header'>
+            <img src="https://drive.google.com/file/d/1ciMZhUymSZeswzqmvhgph4Jd-FVVFPwc/view?usp=sharing" alt="EY Logo">
+        </div>
+    """, unsafe_allow_html=True)
 
-        result = crew.kickoff()
-        response_dict = split_response_into_dict(str(result))
-        template_path = "Report_final_template.docx"
-        output_path = "Generated_Report.docx"
+    st.markdown("""<div class='chat-container'>""", unsafe_allow_html=True)
+    st.markdown("""<div class='bot-bubble chat-bubble fade-in'>👋 Welcome to Deep InSight! Enter your research topic below.</div>""", unsafe_allow_html=True)
 
-        populate_template(template_path, output_path, response_dict)
-        print("\n✅ Report generated successfully!")
+    default_topic = Config.REPORT_CONFIG.get("default_topic", "Technology Trends")
+    report_topic = st.text_input("Enter research topic:", default_topic)
 
-        while True:
-            feedback = get_user_feedback()
-            if not feedback:
-                break
-
-            print("\n🔄 Regenerating report based on feedback...")
-            task = report_generation_task(agent, f"{report_topic} with focus on: {feedback}")
-            crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
-
-            revised_result = crew.kickoff()
-            revised_response_dict = split_response_into_dict(str(revised_result))
-            populate_template(template_path, output_path, revised_response_dict)
-            print("\n✅ Updated report generated successfully!")
-
-        if result and task.output_file:
-            output_path = Path(task.output_file).resolve()
+    if st.button("Generate Report"):
+        with st.spinner("Generating report..."):
             try:
-                send_report_email("Generated_Report.docx", report_topic)
-                print(f"\n✅ Report generated and emailed successfully!\nFile: {output_path}\n")
-            except Exception as email_error:
-                logger.error(f"Email failed: {str(email_error)}")
-                print(f"\n⚠️ Report generated but email sending failed.\nFile: {output_path}\n")
-        else:
-            print("\n❌ Report generation failed.\n")
+                report_path = generate_report(report_topic)
+                st.markdown("""<div class='bot-bubble chat-bubble fade-in'>✅ Report generated successfully!</div>""", unsafe_allow_html=True)
+                st.download_button("📥 Download Report", report_path, file_name="Generated_Report.docx")
+            except Exception as e:
+                logger.error(f"Error: {str(e)}\n{traceback.format_exc()}")
+                st.markdown(f"""<div class='bot-bubble chat-bubble fade-in'>🔥 Error: {str(e)}</div>""", unsafe_allow_html=True)
 
-    except Exception as e:
-        logger.error(f"Critical error occurred: {str(e)}\n{traceback.format_exc()}")
-        print(f"\n🔥 Critical Error: {str(e)}\n")
-        exit(1)
+    feedback = st.text_area("🔍 Provide feedback for refinement:")
+    if st.button("Regenerate Report with Feedback") and feedback:
+        with st.spinner("Regenerating report..."):
+            try:
+                report_path = generate_report(report_topic, feedback)
+                st.markdown("""<div class='bot-bubble chat-bubble fade-in'>✅ Updated report generated successfully!</div>""", unsafe_allow_html=True)
+                st.download_button("📥 Download Updated Report", report_path, file_name="Updated_Report.docx")
+            except Exception as e:
+                logger.error(f"Error: {str(e)}\n{traceback.format_exc()}")
+                st.markdown(f"""<div class='bot-bubble chat-bubble fade-in'>🔥 Error: {str(e)}</div>""", unsafe_allow_html=True)
+
+    if st.button("Send Report via Email"):
+        try:
+            send_report_email("Generated_Report.docx", report_topic)
+            st.markdown("""<div class='bot-bubble chat-bubble fade-in'>📧 Report emailed successfully!</div>""", unsafe_allow_html=True)
+        except Exception as email_error:
+            logger.error(f"Email failed: {str(email_error)}")
+            st.markdown("""<div class='bot-bubble chat-bubble fade-in'>⚠️ Email sending failed.</div>""", unsafe_allow_html=True)
+
+    st.markdown("""</div>""", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
